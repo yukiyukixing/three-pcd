@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCD Viewer</title>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #upload-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="upload-container">
+        <input type="file" id="pcd-upload" accept=".pcd" />
+        <span id="file-name">未选择文件</span>
+        <button id="clear-scene">清除场景</button>
+    </div>
+    <script src="./three.min.js"></script>
+    <script src="./PCDLoader.js"></script>
+    <script src="./OrbitControls.js"></script>
+    <script>
+        // 获取上传按钮和画布元素
+        const pcdUpload = document.getElementById('pcd-upload');
+        const fileNameLabel = document.getElementById('file-name');
+        const clearSceneButton = document.getElementById('clear-scene');
+
+        // 设置场景、摄像头和渲染器
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(new THREE.Color(5 / 255, 20 / 255, 39 / 255));
+        document.body.appendChild(renderer.domElement);
+
+        // 设置控制器
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.addEventListener('change', () => renderer.render(scene, camera));
+
+        // 设置光源
+        const light = new THREE.AmbientLight(0xffffff);
+        scene.add(light);
+
+        // 设置摄像头位置
+        camera.position.z = 50;
+
+        // 创建PCD加载器
+        const pcdLoader = new THREE.PCDLoader();
+        const pointCloudMaterial = new THREE.PointsMaterial({
+            size: 0.05,
+            color: 0xffffff,
+            opacity: 0.7,
+            transparent: true,
+        });
+        // 处理上传的PCD文件
+        pcdUpload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                fileNameLabel.textContent = file.name; // 更新文件名标签
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const points = pcdLoader.parse(e.target.result);
+                    points.material = pointCloudMaterial;
+                    scene.add(points);
+                    renderer.render(scene, camera);
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+
+        // 创建一个函数来清除场景中的点云
+        function clearPointClouds() {
+            for (const object of scene.children.slice()) {
+                if (object instanceof THREE.Points) {
+                    scene.remove(object);
+                }
+            }
+        }
+
+        // 为清除场景按钮添加点击事件监听器
+        clearSceneButton.addEventListener('click', () => {
+            clearPointClouds();
+            renderer.render(scene, camera);
+            fileNameLabel.textContent = '未选择文件';
+        });
+
+        // 渲染场景
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+
+</body>
+
+</html>
